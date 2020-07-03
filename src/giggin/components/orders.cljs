@@ -1,15 +1,25 @@
 (ns giggin.components.orders
   (:require [giggin.state :as state]))
 
+(defn get-item-price
+  [id]
+  (get-in @state/gigs [id :price]))
+
+(defn get-net-price
+  "item price * quantity"
+  [id quantity]
+  (* (get-item-price id) quantity))
+
 (defn total
   []
   (reduce +
-          (map (fn [[id quantity]] (* (get-in @state/gigs [id :price]) quantity))
-               @state/orders)))
+          (map (fn [[id quantity]] (get-net-price id quantity)) @state/orders)))
+
 (defn orders
   []
   (let [remove-from-orders #(swap! state/orders dissoc %)
-        remove-all-orders #(reset! state/orders {})]
+        remove-all-orders #(reset! state/orders {})
+        get-gig-item #(get-in @state/gigs [%1 %2])]
     [:aside
      (if (empty? @state/orders)
        [:div.empty
@@ -20,12 +30,12 @@
          (for [[id quantity] @state/orders]
            [:div.item {:key id}
             [:div.img
-             [:img {:src (get-in @state/gigs [id :img])
-                    :alt (get-in @state/gigs [id :title])}]]
+             [:img {:src (get-gig-item id :img)
+                    :alt (get-gig-item id :title)}]]
             [:div.content
-             [:p.title (str (get-in @state/gigs [id :title]) " \u00D7 " quantity)]]
+             [:p.title (str (get-gig-item id :title) " \u00D7 " quantity)]]
             [:div.action
-             [:div.price (* (get-in @state/gigs [id :price]) quantity)]
+             [:div.price (* (get-gig-item id :price) quantity)]
              [:button.btn.btn--link.tooltip
               {:data-tooltip "Remove"
                :on-click #(remove-from-orders id)}
